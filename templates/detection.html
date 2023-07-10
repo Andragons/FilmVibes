@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/fontAwesome.css">
+    <link rel="stylesheet" href="css/templatemo-main.css">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css"
+        integrity="sha384-xOolHFLEh07PJGoPkLv1IbcEPTNtaed2xpHsD9ESMhqIYd0nLMwNLD69Npy4HI+N" crossorigin="anonymous">
+
+    <title>Real Time Emotion Detection</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+</head>
+
+<body>
+    <div class="parallax-content baner-content" id="home">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-8 offset-lg-2 d-grid justify-content-center text-center">
+                    <h3 class="mt-5">
+                        <font color="black" style="font-family:verdana;" style="font-size:300%;"> Real Time Emotion
+                            Detection</font>
+                    </h3>
+                    <img src="{{ url_for('video_feed') }}" width="80%"
+                        style="border-radius: 50px; border-width: 20px;">
+                </div>
+            </div>
+
+            <br>
+            <div class="row">
+                <div class="col-lg-8 offset-lg-2 d-grid justify-content-center text-center">
+                    <button type="button" id="myButton" class="btn btn-primary" style="margin-right: 2cm;">Start</button>
+                    <button type="button" id="buttonStop" class="btn btn-danger">Stop</button>
+                    <p id="output"></p>
+                    <script>
+                        document.getElementById('myButton').addEventListener('click', function() {
+                            fetch('/button-clicked')
+                                .then(response => response.text())
+                                .then(data => {
+                                    document.getElementById('output').innerHTML = data;
+                                })
+                                .catch(error => {
+                                    console.error('Terjadi kesalahan:', error);
+                                });
+                        });
+                    </script>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
