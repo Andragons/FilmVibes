@@ -24,7 +24,6 @@ utils = "*"
 scipy = "*"
 matplotlib = "*"
 imageio = "*"
-sqlalchemy = "*"
 
 [dev-packages]
 
