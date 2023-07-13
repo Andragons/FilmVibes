@@ -57,6 +57,18 @@
                                     console.error('Terjadi kesalahan:', error);
                                 });
                         });
+
+                        // Add another event listener to fetch and display movie data
+                        document.getElementById('movieButton').addEventListener('click', function() {
+                            fetch('/movie')
+                                .then(response => response.text())
+                                .then(data => {
+                                    document.getElementById('movieOutput').innerHTML = data;
+                                })
+                                .catch(error => {
+                                    console.error('Terjadi kesalahan:', error);
+                                });
+                        });
                     </script>
                 </div>
             </div>

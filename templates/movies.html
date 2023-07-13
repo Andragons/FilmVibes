@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Recommended Movies</title>
+</head>
+<body>
+    <h1>Recommended Movies</h1>
+    <table>
+        <tr>
+            <th>ID</th>
+            <th>Emotion</th>
+            <th>Movie Title</th>
+            <th>Timestamp</th>
+        </tr>
+        {% for movie in movies %}
+        <tr>
+            <td>{{ movie.id }}</td>
+            <td>{{ movie.emotion }}</td>
+            <td>{{ movie.movie_title }}</td>
+            <td>{{ movie.timestamp }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>

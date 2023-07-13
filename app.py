@@ -7,7 +7,6 @@ import warnings
 import requests
 import random
 import mysql.connector
-
 from flask import Flask, jsonify, render_template, Response
 from keras.models import load_model
 from statistics import mode
@@ -29,8 +28,6 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 import jwt, os,random
 from flask_mail import Mail, Message
-import pymysql
-pymysql.install_as_MySQLdb()
 
 app = Flask(__name__)
 api = Api(app)
@@ -71,6 +68,48 @@ class Histori(db.Model):
     tanggal = db.Column(db.Date)
 
     user = db.relationship('Users', backref=db.backref('histori', lazy=True))
+
+
+# class History(db.Model):
+#     id = db.Column(db.Integer(), primary_key=True, nullable=False)
+#     nama = db.Column(db.String(30), nullable=False)
+#     jenis_kendaraan = db.Column(db.String(30), nullable=False)
+#     tanggal = db.Column(db.Date)
+#     waktu = db.Column(db.Time)
+
+
+
+
+# Email functions
+# https://medium.com/@stevenrmonaghan/password-reset-with-flask-mail-protocol-ddcdfc190968
+# https://www.youtube.com/watch?v=g_j6ILT-X0k
+# https://stackoverflow.com/questions/72547853/unable-to-send-email-in-c-sharp-less-secure-app-access-not-longer-available
+
+#history
+# historyParser = reqparse.RequestParser()
+# historyParser.add_argument('jenis_kendaraan', type=str, help='Jenis Kendaraan', location='json', required=True)
+# historyParser.add_argument('tanggal', type=str, help='Tanggal', location='json', required=True)
+# historyParser.add_argument('waktu', type=str, help='Waktu', location='json', required=True)
+
+# @app.route('/history')
+# def get_history():
+#     args = historyParser.parse_args()
+#     jenis_kendaraan = args['jenis_kendaraan']
+#     tanggal = args['tanggal']
+#     waktu = args['waktu']
+
+#     # Lanjutkan dengan logika lainnya untuk mendapatkan data history
+#     history_list = History.query.all()
+#     history_data = []
+#     for history in history_list:
+#         history_data.append({
+#             'nama': history.nama,
+#             'jenis_kendaraan': history.jenis_kendaraan,
+#             'tanggal': history.tanggal.strftime('%Y-%m-%d'),
+#             'waktu': history.waktu.strftime('%H:%M:%S')
+#         })
+#     return jsonify(history_data)
+
 
 
 #parserRegister
@@ -128,6 +167,35 @@ class Registration(Resource):
 otpparser = reqparse.RequestParser()
 otpparser.add_argument('otp', type=str, help='otp', location='json', required=True)
 otpparser.add_argument('email', type=str, help='email', location='json', required=True)
+# @api.route('/verifikasi')
+# class Verify(Resource):
+#     @api.expect(otpparser)
+#     def post(self):
+#         args = otpparser.parse_args()
+#         otp = args['otp']
+#         if 'token' in session:
+#             sesion = session['token']
+#             if otp == sesion:
+#                 email = session['email']
+
+#                 user = Users.query.filter_by(email=email).first()
+#                 user.is_verified = True
+
+#                 db.session.commit()  # Melakukan komit ke database
+
+#                 if db.session.is_active:  # Memeriksa apakah sesi masih aktif
+#                     session.pop('token', None)
+#                     print("Perubahan berhasil dikommit ke database")
+#                     return {'message': 'Email berhasil diverifikasi'}
+#                 else:
+#                     print("Terjadi kesalahan saat melakukan komit")
+#                     db.session.rollback()  # Mengembalikan perubahan jika terjadi kesalahan
+#                     return {'message': 'Terjadi kesalahan pada server'}
+
+#             else:
+#                 return {'message': 'Kode OTP Salah'}
+#         else:
+#             return {'message': 'Kode OTP Salah'}
 
 @api.route('/verifikasi')
 class Verify(Resource):
@@ -233,7 +301,6 @@ class DetailUser(Resource):
             }, 401
 
         return data, 200
-        
 
 editParser = reqparse.RequestParser()
 editParser.add_argument('firstname', type=str, help='Firstname', location='json', required=True)
@@ -268,6 +335,22 @@ verifyParser.add_argument(
     'otp', type=str, help='firstname', location='json', required=True)
 
 
+# @api.route('/verify')
+# class Verify(Resource):
+#     @api.expect(verifyParser)
+#     def post(self):
+#         args = verifyParser.parse_args()
+#         otp = args['otp']
+#         try:
+#             user = Users.verify_token(otp)
+#             if user is None:
+#                 return {'message' : 'Verifikasi gagal'}, 401
+#             user.is_verified = True
+#             db.session.commit()
+#             return {'message' : 'Akun sudah terverifikasi'}, 200
+#         except Exception as e:
+#             print(e)
+#             return {'message' : 'Terjadi error'}, 200
 
 #editpasswordParser
 editPasswordParser =  reqparse.RequestParser()
@@ -297,66 +380,70 @@ class Password(Resource):
             }, 401
         return {'message' : 'Password Berhasil Diubah'}, 200
 
+#histori parser
+historiParser = reqparse.RequestParser()
+historiParser.add_argument('nama', type=str, help='Nama', location='json', required=True)
+historiParser.add_argument('nama_gerakan', type=str, help='Nama Gerakan', location='json', required=True)
+historiParser.add_argument('tanggal', type=str, help='Tanggal', location='json', required=True)
 
-@api.route('/movie')
-class get_movies(Resource):
+#membuat histori baru
+@api.route('/add-histori')
+class AddHistoriResource(Resource):
+    @api.expect(authParser, historiParser)
+    def post(self):
+        args = authParser.parse_args()
+        bearerAuth = args['Authorization']
+
+        jwtToken = bearerAuth[7:]
+        token = decodetoken(jwtToken)
+        user_id = token['user_id']
+
+        args = historiParser.parse_args()
+        nama = args['nama']
+        nama_gerakan = args['nama_gerakan']
+        tanggal = datetime.strptime(args['tanggal'], '%Y-%m-%d').date()
+
+        histori = Histori(user_id=user_id, nama=nama, nama_gerakan=nama_gerakan, tanggal=tanggal)
+        db.session.add(histori)
+        db.session.commit()
+
+        return {'message': 'Histori berhasil ditambahkan'}, 201
+
+#menampilkan data histori bedasarkan id
+@api.route('/read-histori')
+class ReadHistori(Resource):
+    @api.expect(authParser)
     def get(self):
-        cursor = dba.cursor()
-        query = "SELECT id, emotion, movie_title, timestamp FROM recommended_movies"
-        cursor.execute(query)
-        movies = cursor.fetchall()
+        # Mendapatkan user_id dari token yang terverifikasi
+        # user_id = get_jwt_identity()
+        args = authParser.parse_args()
+        bearerAuth = args['Authorization']
 
-        movie_data = []
-        for movie in movies:
-            movie_id, emotion, movie_title, timestamp = movie
-            movie_data.append({
-                'id': movie_id,
-                'emotion': emotion,
-                'movie_title': movie_title,
-                'timestamp': str(timestamp)
+        jwtToken = bearerAuth[7:]
+        token = decodetoken(jwtToken)
+        user_id = token['user_id']
+
+        # Mengambil data histori berdasarkan user_id
+        histori = Histori.query.filter_by(user_id=user_id).all()
+        if not histori:
+            return {'message': 'Histori tidak ditemukan'}, 404
+
+        histori_data = []
+        for h in histori:
+            histori_data.append({
+                'id': h.id,
+                'nama': h.nama,
+                'nama_gerakan': h.nama_gerakan,
+                'tanggal': h.tanggal.strftime('%Y-%m-%d')
             })
 
-        cursor.close()
-        return movie_data
-
-
-
-@api.route('/visualisasi')
-class get_frequent_emotion(Resource):
-    def get(self):
-        cursor = dba.cursor()
-
-        # Menghitung emosi yang sering muncul
-        emotion_query = "SELECT emotion, COUNT(*) as count FROM recommended_movies GROUP BY emotion ORDER BY count DESC LIMIT 1"
-        cursor.execute(emotion_query)
-        frequent_emotion = cursor.fetchone()
-
-        # Menghitung judul film yang sering muncul
-        title_query = "SELECT movie_title, COUNT(*) as count FROM recommended_movies GROUP BY movie_title ORDER BY count DESC LIMIT 1"
-        cursor.execute(title_query)
-        frequent_movie_title = cursor.fetchone()
-
-        cursor.close()
-
-        response = {
-            'Emosi yang sering muncul': {
-                'Emosi': frequent_emotion[0],
-                'Total': frequent_emotion[1]
-            },
-            'Judul Film yang sering muncul': {
-                'Judul Film': frequent_movie_title[0],
-                'Total': frequent_movie_title[1]
-            }
-        }
-        return response
-
-
+        return histori_data, 200
     
 
-# =================================================================================== #
+# ==================================================================================
 
 # Create a connection to the MySQL database
-dba = mysql.connector.connect(
+base = mysql.connector.connect(
     host="localhost",
     user="root",
     password="",
@@ -364,7 +451,7 @@ dba = mysql.connector.connect(
 )
 
 # Create a cursor object to execute SQL queries
-cursor = dba.cursor()
+cursor = base.cursor()
 
 USE_WEBCAM = True  # If false, loads video file source
 
@@ -492,7 +579,7 @@ def gen_frames():
         query = "INSERT INTO captured_images (image_path, emotion) VALUES (%s, %s)"
         values = (image_filename, emotion_mode)
         cursor.execute(query, values)
-        dba.commit()
+        base.commit()
 
     cap.release()
 
@@ -516,7 +603,7 @@ def stop_program():
 
 
 @app.route('/detection')
-def detection():
+def index():
     return render_template('index.html')
 
 
@@ -563,7 +650,7 @@ def button_clicked():
                 query = "INSERT INTO recommended_movies (emotion, movie_title) VALUES (%s, %s)"
                 values = (max_emotion, movie_title)
                 cursor.execute(query, values)
-                dba.commit()
+                base.commit()
         else:
             output += "No movie recommendations available."
     else:
@@ -587,7 +674,7 @@ def button_clicked():
         query = "INSERT INTO captured_images (image_path, emotion) VALUES (%s, %s)"
         values = (image_filename, max_emotion)
         cursor.execute(query, values)
-        dba.commit()
+        base.commit()
 
         # Add the image filename to the captured_images list
         captured_images.append(image_filename)
@@ -600,6 +687,23 @@ def stop_program_route():
     return 'Program stopped'  # Mengembalikan respons saat program dihentikan
 
 
+@app.route('/movie')
+def display_movies():
+    # Create a cursor object to execute SQL queries
+    cursor = base.cursor()
+
+    # Execute SQL query to fetch movie data from the table
+    query = "SELECT id, emotion, movie_title, timestamp FROM recommended_movies"
+    cursor.execute(query)
+
+    # Fetch all rows from the result set
+    movies = cursor.fetchall()
+
+    # Close the cursor
+    cursor.close()
+
+    # Render the 'movie.html' template with the fetched movie data
+    return render_template('movies.html', movies=movies)
+
 if __name__ == '__main__':
-    # app.run(ssl_context='adhoc', debug=True)
-    app.run(host='0.0.0.0' , debug=True)
+    app.run(host='0.0.0.0', debug=True)
